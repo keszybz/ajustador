@@ -15,7 +15,10 @@ import copy
 from collections import namedtuple
 import numpy as np
 from numpy.lib import recfunctions
-from igor import binarywave
+try:
+    from igor import binarywave
+except ImportError:
+    binarywave = None
 
 from . import utilities
 from .vartype import vartype
@@ -100,6 +103,9 @@ class IVCurve(Trace):
     """
 
     def __init__(self, filename, fileinfo, injection, x, y, features):
+        if binarywave is None:
+            raise ValueError('igor module is not available, cannot read igor files')
+
         super().__init__(injection, x, y, features)
 
         self.filename = filename
@@ -107,15 +113,17 @@ class IVCurve(Trace):
 
     @classmethod
     def load(cls, dirname, filename, IV, IF, endtime, features):
+        assert binarywave
+
         path = os.path.join(dirname, filename)
-        dat=binarywave.load(path)
+        dat = binarywave.load(path)
         data = dat['wave']['wData']
         if dat['version']==2:
             dt=dat['wave']['wave_header']['hsA']
         elif dat['version']==5:
             dt=dat['wave']['wave_header']['sfA'][0]
-        numpts=binarywave.load(path)['wave']['wave_header']['npnts']
-        tot_time=dt*numpts
+        numpts = binarywave.load(path)['wave']['wave_header']['npnts']
+        tot_time = dt*numpts
         #time = np.linspace(0, endtime, num=data.size, endpoint=False)
         time = np.linspace(0, tot_time, num=numpts, endpoint=False)
         #optionally shorten the data
